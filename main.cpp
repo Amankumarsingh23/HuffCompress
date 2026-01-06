@@ -156,6 +156,62 @@ void compressFile(string inputFileName, string outputFileName) {
 }
 
 
+void decompressFile(string inputFileName, string outputFileName) {
+    ifstream inputFile(inputFileName, ios::binary);
+    ofstream outputFile(outputFileName);
+
+    if (!inputFile.is_open() || !outputFile.is_open()) {
+        cerr << "Error opening files!" << endl;
+        return;
+    }
+
+    // 1. Read Metadata (The Huffman Map)
+    size_t mapSize;
+    inputFile.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+    unordered_map<string, char> reverseCodeMap; // We want Code -> Char now
+
+    for (size_t i = 0; i < mapSize; i++) {
+        char ch = inputFile.get();
+        size_t codeLen;
+        inputFile.read(reinterpret_cast<char*>(&codeLen), sizeof(codeLen));
+        char* buffer = new char[codeLen + 1];
+        inputFile.read(buffer, codeLen);
+        buffer[codeLen] = '\0';
+        reverseCodeMap[string(buffer)] = ch;
+        delete[] buffer;
+    }
+
+    // 2. Read Padding and Bits
+    char paddingChar;
+    inputFile.get(paddingChar);
+    int padding = static_cast<int>(paddingChar);
+
+    string bitString = "";
+    char byte;
+    while (inputFile.get(byte)) {
+        bitString += bitset<8>(static_cast<unsigned char>(byte)).to_string();
+    }
+
+    // 3. Remove Padding
+    if (padding > 0 && bitString.length() >= padding) {
+        bitString.erase(bitString.length() - padding);
+    }
+
+    // 4. Translate Bits to Characters
+    string currentCode = "";
+    for (char bit : bitString) {
+        currentCode += bit;
+        if (reverseCodeMap.find(currentCode) != reverseCodeMap.end()) {
+            outputFile.put(reverseCodeMap[currentCode]);
+            currentCode = ""; // Reset for next character
+        }
+    }
+
+    inputFile.close();
+    outputFile.close();
+    cout << "Decompression complete! Check: " << outputFileName << endl;
+}
+
 
 int main() {
     string fileName = "input.txt";
