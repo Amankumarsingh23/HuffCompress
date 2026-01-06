@@ -53,6 +53,23 @@ unordered_map<char, int> countFrequency(string fileName) {
     return freqMap;
 }
 
+// Map to store character and its corresponding Huffman code
+unordered_map<char, string> huffmanCodeMap;
+
+void generateCodes(Node* root, string str) {
+    if (!root) return;
+
+    // If it's a leaf node, it contains a character
+    if (root->ch != '$') {
+        huffmanCodeMap[root->ch] = str;
+    }
+
+    // Traverse left and right
+    generateCodes(root->left, str + "0");
+    generateCodes(root->right, str + "1");
+}
+
+
 Node* buildHuffmanTree(unordered_map<char, int>& freqMap) {
     // Create a min heap of pointers to Nodes
     priority_queue<Node*, vector<Node*>, Compare> minHeap;
@@ -76,6 +93,9 @@ Node* buildHuffmanTree(unordered_map<char, int>& freqMap) {
 
         minHeap.push(top);
     }
+     return minHeap.top();
+
+}
 
     // The remaining node is the root of the Huffman Tree
 
@@ -95,6 +115,16 @@ int main() {
 
     Node* root = buildHuffmanTree(frequencies);
     cout << "Huffman Tree built successfully! Root frequency: " << root->freq << endl;
+
+    // 3. Generate Codes
+    generateCodes(root, "");
+
+    // Display the codes
+    cout << "\n--- Huffman Codes ---" << endl;
+    for (auto pair : huffmanCodeMap) {
+        cout << "'" << pair.first << "' : " << pair.second << endl;
+    }
+    
 
     return 0;
 }
