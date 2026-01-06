@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <bitset>
+
 
 
 using namespace std;
@@ -98,6 +100,61 @@ Node* buildHuffmanTree(unordered_map<char, int>& freqMap) {
 }
 
     // The remaining node is the root of the Huffman Tree
+
+
+
+
+void compressFile(string inputFileName, string outputFileName) {
+    ifstream inputFile(inputFileName);
+    ofstream outputFile(outputFileName, ios::binary);
+
+    if (!inputFile.is_open() || !outputFile.is_open()) {
+        cerr << "Error opening files!" << endl;
+        return;
+    }
+
+    // 1. Write the "Header" (Frequency Map) so we can rebuild the tree later
+    // For simplicity in this module, we write the size and then each entry
+    size_t mapSize = huffmanCodeMap.size();
+    outputFile.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+    for (auto const& [ch, code] : huffmanCodeMap) {
+        outputFile.put(ch);
+        size_t codeLen = code.length();
+        outputFile.write(reinterpret_cast<const char*>(&codeLen), sizeof(codeLen));
+        outputFile.write(code.c_str(), codeLen);
+    }
+
+    // 2. Encode the actual text
+    string bitString = "";
+    char ch;
+    inputFile.clear();
+    inputFile.seekg(0); // Go back to start of input file
+    while (inputFile.get(ch)) {
+        bitString += huffmanCodeMap[ch];
+    }
+
+    // 3. Bit Packing
+    // Add padding to make it a multiple of 8
+    int padding = 8 - (bitString.length() % 8);
+    if (padding == 8) padding = 0;
+    
+    for (int i = 0; i < padding; i++) bitString += '0';
+
+    // Save padding info so we can ignore it during decompression
+    outputFile.put(static_cast<char>(padding));
+
+    // Write bits as bytes
+    for (size_t i = 0; i < bitString.length(); i += 8) {
+        bitset<8> byte(bitString.substr(i, 8));
+        unsigned char charToWrite = static_cast<unsigned char>(byte.to_ulong());
+        outputFile.put(charToWrite);
+    }
+
+    inputFile.close();
+    outputFile.close();
+    cout << "Compression complete! Check: " << outputFileName << endl;
+}
+
 
 
 int main() {
